@@ -20,6 +20,9 @@ export default function Portfolio() {
         .from("portfolio")
         .select("*");
 
+      console.log("📦 SUPABASE DATA:", data);
+      console.log("⚠️ SUPABASE ERROR:", error);
+
       if (error) {
         console.error("Fehler beim Laden:", error.message);
       } else {
