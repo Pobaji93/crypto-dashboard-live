@@ -1,36 +1,61 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
+
 type Holding = {
-  name: string;
+  id: string;
   symbol: string;
   amount: number;
   price: number;
 };
 
-const dummyHoldings: Holding[] = [
-  { name: "Bitcoin", symbol: "BTC", amount: 0.5, price: 30000 },
-  { name: "Ethereum", symbol: "ETH", amount: 2, price: 2000 },
-];
-
 export default function Portfolio() {
-  const total = dummyHoldings.reduce(
-    (sum, h) => sum + h.amount * h.price,
-    0
-  );
+  const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHoldings = async () => {
+      const { data, error } = await supabase
+        .from("portfolio")
+        .select("*");
+
+      if (error) {
+        console.error("Fehler beim Laden:", error.message);
+      } else {
+        setHoldings(data as Holding[]);
+      }
+
+      setLoading(false);
+    };
+
+    fetchHoldings();
+  }, []);
+
+  const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
+
+  if (loading) return <p>🔄 Lade dein Portfolio...</p>;
 
   return (
     <section className="bg-white p-4 rounded-xl shadow">
-      <h2 className="text-xl font-semibold mb-2">📊 Portfolio</h2>
-      <ul className="space-y-1">
-        {dummyHoldings.map((h) => (
-          <li key={h.symbol} className="flex justify-between">
-            <span>{h.name} ({h.symbol})</span>
-            <span>{h.amount} × ${h.price.toLocaleString()} = ${(h.amount * h.price).toLocaleString()}</span>
-          </li>
-        ))}
-      </ul>
+      <h2 className="text-xl font-semibold mb-2">📊 Dein Portfolio</h2>
+      {holdings.length === 0 ? (
+        <p>Keine Einträge gefunden.</p>
+      ) : (
+        <ul className="space-y-1">
+          {holdings.map((h) => (
+            <li key={h.id} className="flex justify-between">
+              <span>{h.symbol}</span>
+              <span>
+                {h.amount} × {h.price.toLocaleString()} $ ={" "}
+                {(h.amount * h.price).toLocaleString()} $
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="mt-2 font-bold text-right">
-        Total: ${total.toLocaleString()}
+        Total: {total.toLocaleString()} $
       </div>
     </section>
   );
