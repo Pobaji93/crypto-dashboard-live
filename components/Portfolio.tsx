@@ -20,9 +20,6 @@ export default function Portfolio() {
         .from("portfolio")
         .select("*");
 
-      console.log("📦 SUPABASE DATA:", data);
-      console.log("⚠️ SUPABASE ERROR:", error);
-
       if (error) {
         console.error("Fehler beim Laden:", error.message);
       } else {
@@ -35,24 +32,46 @@ export default function Portfolio() {
     fetchHoldings();
   }, []);
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase
+      .from("portfolio")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Löschen fehlgeschlagen:", error.message);
+    } else {
+      setHoldings((prev) => prev.filter((h) => h.id !== id));
+    }
+  };
+
   const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
 
   if (loading) return <p>🔄 Lade dein Portfolio...</p>;
 
   return (
-    <section className="bg-white p-4 rounded-xl shadow">
-      <h2 className="text-xl font-semibold mb-2">📊 Dein Portfolio</h2>
+    <section className="bg-white p-6 rounded-xl shadow space-y-4">
+      <h2 className="text-xl font-semibold">📊 Dein Portfolio</h2>
       {holdings.length === 0 ? (
         <p>Keine Einträge gefunden.</p>
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-2">
           {holdings.map((h) => (
-            <li key={h.id} className="flex justify-between">
-              <span>{h.symbol}</span>
-              <span>
+            <li
+              key={h.id}
+              className="flex justify-between items-center border-b pb-2"
+            >
+              <span className="font-medium">{h.symbol}</span>
+              <span className="text-sm text-gray-700">
                 {h.amount} × {h.price.toLocaleString()} $ ={" "}
                 {(h.amount * h.price).toLocaleString()} $
               </span>
+              <button
+                onClick={() => handleDelete(h.id)}
+                className="text-red-600 hover:text-red-800 text-sm ml-4"
+              >
+                ✖️
+              </button>
             </li>
           ))}
         </ul>
