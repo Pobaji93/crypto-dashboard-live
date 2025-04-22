@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { coinLogos } from "../lib/coinLogos";
-import { FaTrash } from "react-icons/fa";
+import { fetchCoinImage } from "../lib/fetchCoinImage";
 
 type Holding = {
   id: string;
@@ -12,35 +11,35 @@ type Holding = {
   price: number;
 };
 
+type CoinWithImage = Holding & { imageUrl?: string };
+
 export default function Portfolio() {
-  const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [holdings, setHoldings] = useState<CoinWithImage[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHoldings = async () => {
       const { data, error } = await supabase.from("portfolio").select("*");
+
       if (error) {
-        console.error("SUPABASE ERROR:", error.message);
-      } else {
-        setHoldings(data as Holding[]);
+        console.error("Fehler beim Laden:", error.message);
+        setLoading(false);
+        return;
       }
+
+      const enrichedHoldings = await Promise.all(
+        (data as Holding[]).map(async (h) => {
+          const imageUrl = await fetchCoinImage(h.symbol);
+          return { ...h, imageUrl };
+        })
+      );
+
+      setHoldings(enrichedHoldings);
       setLoading(false);
     };
+
     fetchHoldings();
   }, []);
-
-  const handleDelete = async (id: string) => {
-    const confirm = window.confirm("Möchtest du diesen Eintrag wirklich löschen?");
-    if (!confirm) return;
-
-    setHoldings((prev) => prev.filter((h) => h.id !== id));
-
-    const { error } = await supabase.from("portfolio").delete().eq("id", id);
-    if (error) {
-      alert("Fehler beim Löschen");
-      console.error("SUPABASE DELETE ERROR:", error.message);
-    }
-  };
 
   const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
 
@@ -48,39 +47,27 @@ export default function Portfolio() {
 
   return (
     <section className="bg-white p-4 rounded-xl shadow">
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        📊 Dein Portfolio
-      </h2>
+      <h2 className="text-xl font-semibold mb-4">📊 Dein Portfolio</h2>
       {holdings.length === 0 ? (
         <p>Keine Einträge gefunden.</p>
       ) : (
-        <ul className="divide-y">
+        <ul className="space-y-2">
           {holdings.map((h) => (
-            <li
-              key={h.id}
-              className="flex justify-between items-center py-2 transition-opacity duration-300"
-            >
+            <li key={h.id} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <img
-                  src={coinLogos[h.symbol.toUpperCase()] || "/default-coin.png"}
-                  alt={h.symbol}
-                  className="w-6 h-6 rounded-full"
-                />
-                <span className="font-medium">{h.symbol}</span>
+                {h.imageUrl && (
+                  <img
+                    src={h.imageUrl}
+                    alt={`${h.symbol} logo`}
+                    className="w-6 h-6"
+                  />
+                )}
+                <span className="font-medium uppercase">{h.symbol}</span>
               </div>
-              <div className="flex items-center gap-4">
-                <span>
-                  {h.amount} × {h.price.toLocaleString()} $ ={" "}
-                  {(h.amount * h.price).toLocaleString()} $
-                </span>
-                <button
-                  onClick={() => handleDelete(h.id)}
-                  className="text-gray-500 hover:text-red-600 transition-colors"
-                  title="Eintrag löschen"
-                >
-                  <FaTrash />
-                </button>
-              </div>
+              <span>
+                {h.amount} × {h.price.toLocaleString()} $ ={" "}
+                {(h.amount * h.price).toLocaleString()} $
+              </span>
             </li>
           ))}
         </ul>
