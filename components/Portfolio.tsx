@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { FiTrash2 } from "react-icons/fi"; // <-- Icon-Bibliothek!
 
 type Holding = {
   id: string;
@@ -13,19 +14,16 @@ type Holding = {
 export default function Portfolio() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHoldings = async () => {
-      const { data, error } = await supabase
-        .from("portfolio")
-        .select("*");
-
+      const { data, error } = await supabase.from("portfolio").select("*");
       if (error) {
         console.error("Fehler beim Laden:", error.message);
       } else {
         setHoldings(data as Holding[]);
       }
-
       setLoading(false);
     };
 
@@ -33,16 +31,19 @@ export default function Portfolio() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase
-      .from("portfolio")
-      .delete()
-      .eq("id", id);
+    const confirm = window.confirm("Möchtest du diesen Eintrag wirklich löschen?");
+    if (!confirm) return;
 
+    setDeletingId(id);
+    await new Promise((res) => setTimeout(res, 200)); // Mini-Delay für Animation
+
+    const { error } = await supabase.from("portfolio").delete().eq("id", id);
     if (error) {
       console.error("Löschen fehlgeschlagen:", error.message);
     } else {
       setHoldings((prev) => prev.filter((h) => h.id !== id));
     }
+    setDeletingId(null);
   };
 
   const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
@@ -55,22 +56,25 @@ export default function Portfolio() {
       {holdings.length === 0 ? (
         <p>Keine Einträge gefunden.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="divide-y">
           {holdings.map((h) => (
             <li
               key={h.id}
-              className="flex justify-between items-center border-b pb-2"
+              className={`flex justify-between items-center py-2 transition-opacity duration-300 ${
+                deletingId === h.id ? "opacity-30" : ""
+              }`}
             >
               <span className="font-medium">{h.symbol}</span>
-              <span className="text-sm text-gray-700">
+              <span>
                 {h.amount} × {h.price.toLocaleString()} $ ={" "}
                 {(h.amount * h.price).toLocaleString()} $
               </span>
               <button
                 onClick={() => handleDelete(h.id)}
-                className="text-red-600 hover:text-red-800 text-sm ml-4"
+                className="text-gray-500 hover:text-red-600 transition ml-4"
+                title="Eintrag löschen"
               >
-                ✖️
+                <FiTrash2 size={18} />
               </button>
             </li>
           ))}
