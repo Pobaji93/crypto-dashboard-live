@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { FiTrash2 } from "react-icons/fi"; // <-- Icon-Bibliothek!
+import { coinLogos } from "../lib/coinLogos";
+import { FaTrash } from "react-icons/fa";
 
 type Holding = {
   id: string;
@@ -14,19 +15,17 @@ type Holding = {
 export default function Portfolio() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHoldings = async () => {
       const { data, error } = await supabase.from("portfolio").select("*");
       if (error) {
-        console.error("Fehler beim Laden:", error.message);
+        console.error("SUPABASE ERROR:", error.message);
       } else {
         setHoldings(data as Holding[]);
       }
       setLoading(false);
     };
-
     fetchHoldings();
   }, []);
 
@@ -34,16 +33,13 @@ export default function Portfolio() {
     const confirm = window.confirm("Möchtest du diesen Eintrag wirklich löschen?");
     if (!confirm) return;
 
-    setDeletingId(id);
-    await new Promise((res) => setTimeout(res, 200)); // Mini-Delay für Animation
+    setHoldings((prev) => prev.filter((h) => h.id !== id));
 
     const { error } = await supabase.from("portfolio").delete().eq("id", id);
     if (error) {
-      console.error("Löschen fehlgeschlagen:", error.message);
-    } else {
-      setHoldings((prev) => prev.filter((h) => h.id !== id));
+      alert("Fehler beim Löschen");
+      console.error("SUPABASE DELETE ERROR:", error.message);
     }
-    setDeletingId(null);
   };
 
   const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
@@ -51,8 +47,10 @@ export default function Portfolio() {
   if (loading) return <p>🔄 Lade dein Portfolio...</p>;
 
   return (
-    <section className="bg-white p-6 rounded-xl shadow space-y-4">
-      <h2 className="text-xl font-semibold">📊 Dein Portfolio</h2>
+    <section className="bg-white p-4 rounded-xl shadow">
+      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        📊 Dein Portfolio
+      </h2>
       {holdings.length === 0 ? (
         <p>Keine Einträge gefunden.</p>
       ) : (
@@ -60,27 +58,34 @@ export default function Portfolio() {
           {holdings.map((h) => (
             <li
               key={h.id}
-              className={`flex justify-between items-center py-2 transition-opacity duration-300 ${
-                deletingId === h.id ? "opacity-30" : ""
-              }`}
+              className="flex justify-between items-center py-2 transition-opacity duration-300"
             >
-              <span className="font-medium">{h.symbol}</span>
-              <span>
-                {h.amount} × {h.price.toLocaleString()} $ ={" "}
-                {(h.amount * h.price).toLocaleString()} $
-              </span>
-              <button
-                onClick={() => handleDelete(h.id)}
-                className="text-gray-500 hover:text-red-600 transition ml-4"
-                title="Eintrag löschen"
-              >
-                <FiTrash2 size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                <img
+                  src={coinLogos[h.symbol.toUpperCase()] || "/default-coin.png"}
+                  alt={h.symbol}
+                  className="w-6 h-6 rounded-full"
+                />
+                <span className="font-medium">{h.symbol}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span>
+                  {h.amount} × {h.price.toLocaleString()} $ ={" "}
+                  {(h.amount * h.price).toLocaleString()} $
+                </span>
+                <button
+                  onClick={() => handleDelete(h.id)}
+                  className="text-gray-500 hover:text-red-600 transition-colors"
+                  title="Eintrag löschen"
+                >
+                  <FaTrash />
+                </button>
+              </div>
             </li>
           ))}
         </ul>
       )}
-      <div className="mt-2 font-bold text-right">
+      <div className="mt-4 font-bold text-right">
         Total: {total.toLocaleString()} $
       </div>
     </section>
