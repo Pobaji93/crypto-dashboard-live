@@ -1,90 +1,84 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { useState, useEffect } from "react";
+import { fetchCoins } from "../lib/fetchCoins";
+
+type CoinOption = {
+  id: string;
+  symbol: string;
+  name: string;
+  image: string;
+};
 
 export default function AddHoldingForm() {
   const [symbol, setSymbol] = useState("");
-  const [amount, setAmount] = useState("");
-  const [price, setPrice] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [amount, setAmount] = useState<number | "">("");
+  const [price, setPrice] = useState<number | "">("");
+  const [coins, setCoins] = useState<CoinOption[]>([]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccessMessage("");
-    setErrorMessage("");
+  useEffect(() => {
+    fetchCoins().then(setCoins).catch(console.error);
+  }, []);
 
-    // einfache Validierung
-    if (!symbol || !amount || !price) {
-      setErrorMessage("Bitte alle Felder ausfüllen.");
-      return;
-    }
+  const handleAdd = async () => {
+    if (!symbol || !amount || !price) return alert("Bitte alle Felder ausfüllen");
 
-    setLoading(true);
+    const res = await fetch("/api/holdings", {
+      method: "POST",
+      body: JSON.stringify({ symbol, amount: Number(amount), price: Number(price) }),
+    });
 
-    const { error } = await supabase.from("portfolio").insert([
-      {
-        symbol: symbol.toUpperCase(),
-        amount: parseFloat(amount),
-        price: parseFloat(price),
-      },
-    ]);
-
-    setLoading(false);
-
-    if (error) {
-      console.error("Fehler beim Speichern:", error.message);
-      setErrorMessage("Fehler beim Speichern.");
-    } else {
-      setSymbol("");
+    if (res.ok) {
       setAmount("");
       setPrice("");
-      setSuccessMessage("✅ Eintrag gespeichert!");
+      setSymbol("");
+    } else {
+      alert("Fehler beim Speichern");
     }
   };
 
   return (
-    <section className="bg-white p-4 rounded-xl shadow space-y-2">
-      <h2 className="text-xl font-semibold">➕ Coin hinzufügen</h2>
-      <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 items-center">
-        <input
-          className="border px-2 py-1 rounded flex-grow min-w-[100px]"
-          type="text"
-          placeholder="Symbol (z. B. BTC)"
+    <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
+      <h2 className="text-lg font-semibold flex items-center gap-2">
+        <span>➕</span> Coin hinzufügen
+      </h2>
+      <div className="flex flex-wrap gap-2 items-center">
+        <select
+          className="p-2 border rounded w-full sm:w-48"
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
-        />
+        >
+          <option value="">Coin wählen…</option>
+          {coins.map((coin) => (
+            <option key={coin.id} value={coin.symbol}>
+              {coin.name} ({coin.symbol.toUpperCase()})
+            </option>
+          ))}
+        </select>
+
         <input
-          className="border px-2 py-1 rounded flex-grow min-w-[100px]"
           type="number"
           step="any"
           placeholder="Menge"
+          className="p-2 border rounded w-full sm:w-32"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
         />
         <input
-          className="border px-2 py-1 rounded flex-grow min-w-[100px]"
           type="number"
           step="any"
           placeholder="Preis in $"
+          className="p-2 border rounded w-full sm:w-32"
           value={price}
-          onChange={(e) => setPrice(e.target.value)}
+          onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
         />
         <button
-          type="submit"
-          className={`px-4 py-1 rounded text-white font-semibold ${
-            loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-          }`}
-          disabled={loading}
+          onClick={handleAdd}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
         >
-          {loading ? "Speichern..." : "Hinzufügen"}
+          Hinzufügen
         </button>
-      </form>
-
-      {errorMessage && <p className="text-red-600 text-sm">{errorMessage}</p>}
-      {successMessage && <p className="text-green-600 text-sm">{successMessage}</p>}
-    </section>
+      </div>
+    </div>
   );
 }
