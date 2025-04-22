@@ -1,3 +1,4 @@
+import "../styles/globals.css";
 export const metadata = {
   title: "Crypto Dashboard",
   description: "Live crypto prices and portfolio tracker",
