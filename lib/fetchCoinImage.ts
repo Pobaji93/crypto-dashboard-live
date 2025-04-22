@@ -1,3 +1,5 @@
+// lib/fetchCoinImage.ts
+
 export async function fetchCoinImage(symbol: string): Promise<string | null> {
   try {
     const listRes = await fetch("https://api.coingecko.com/api/v3/coins/list");
