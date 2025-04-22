@@ -7,15 +7,22 @@ export default function AddHoldingForm() {
   const [symbol, setSymbol] = useState("");
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccessMessage("");
+    setErrorMessage("");
 
-    if (!symbol || !amount || !price || Number(amount) <= 0 || Number(price) <= 0) {
-      setMessage("⚠️ Bitte gib gültige Werte ein.");
+    // einfache Validierung
+    if (!symbol || !amount || !price) {
+      setErrorMessage("Bitte alle Felder ausfüllen.");
       return;
     }
+
+    setLoading(true);
 
     const { error } = await supabase.from("portfolio").insert([
       {
@@ -25,58 +32,59 @@ export default function AddHoldingForm() {
       },
     ]);
 
+    setLoading(false);
+
     if (error) {
-      console.error("Fehler beim Einfügen:", error.message);
-      setMessage("❌ Fehler beim Speichern.");
+      console.error("Fehler beim Speichern:", error.message);
+      setErrorMessage("Fehler beim Speichern.");
     } else {
-      setMessage("✅ Erfolgreich hinzugefügt!");
       setSymbol("");
       setAmount("");
       setPrice("");
+      setSuccessMessage("✅ Eintrag gespeichert!");
     }
   };
 
   return (
-    <section className="bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-6">
-      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-        ➕ <span>Coin hinzufügen</span>
-      </h2>
-      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-3 items-center">
+    <section className="bg-white p-4 rounded-xl shadow space-y-2">
+      <h2 className="text-xl font-semibold">➕ Coin hinzufügen</h2>
+      <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 items-center">
         <input
+          className="border px-2 py-1 rounded flex-grow min-w-[100px]"
           type="text"
           placeholder="Symbol (z. B. BTC)"
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
-          className="border border-gray-300 px-3 py-2 rounded w-full md:w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <input
+          className="border px-2 py-1 rounded flex-grow min-w-[100px]"
           type="number"
-          step="0.0001"
+          step="any"
           placeholder="Menge"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="border border-gray-300 px-3 py-2 rounded w-full md:w-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <input
+          className="border px-2 py-1 rounded flex-grow min-w-[100px]"
           type="number"
-          step="0.01"
-          placeholder="Preis ($)"
+          step="any"
+          placeholder="Preis in $"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          className="border border-gray-300 px-3 py-2 rounded w-full md:w-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded transition"
+          className={`px-4 py-1 rounded text-white font-semibold ${
+            loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+          }`}
+          disabled={loading}
         >
-          Hinzufügen
+          {loading ? "Speichern..." : "Hinzufügen"}
         </button>
       </form>
-      {message && (
-        <p className="mt-3 text-sm text-gray-700">
-          {message}
-        </p>
-      )}
+
+      {errorMessage && <p className="text-red-600 text-sm">{errorMessage}</p>}
+      {successMessage && <p className="text-green-600 text-sm">{successMessage}</p>}
     </section>
   );
 }
