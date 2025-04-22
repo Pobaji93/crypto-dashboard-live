@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fetchCoins } from "../lib/fetchCoins";
+import { supabase } from "../lib/supabaseClient";
+import { fetchCoinList } from "../lib/fetchCoinList";
 
 type CoinOption = {
   id: string;
@@ -12,73 +13,95 @@ type CoinOption = {
 
 export default function AddHoldingForm() {
   const [symbol, setSymbol] = useState("");
-  const [amount, setAmount] = useState<number | "">("");
-  const [price, setPrice] = useState<number | "">("");
+  const [amount, setAmount] = useState<number>(0);
+  const [price, setPrice] = useState<number>(0);
   const [coins, setCoins] = useState<CoinOption[]>([]);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchCoins().then(setCoins).catch(console.error);
+    const loadCoins = async () => {
+      const coinList = await fetchCoinList();
+      setCoins(coinList);
+    };
+    loadCoins();
   }, []);
 
-  const handleAdd = async () => {
-    if (!symbol || !amount || !price) return alert("Bitte alle Felder ausfüllen");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    const res = await fetch("/api/holdings", {
-      method: "POST",
-      body: JSON.stringify({ symbol, amount: Number(amount), price: Number(price) }),
-    });
-
-    if (res.ok) {
-      setAmount("");
-      setPrice("");
-      setSymbol("");
-    } else {
-      alert("Fehler beim Speichern");
+    if (!symbol || !amount || !price) {
+      setError("Bitte alle Felder ausfüllen.");
+      return;
     }
+
+    const { error } = await supabase.from("portfolio").insert([{ symbol, amount, price }]);
+
+    if (error) {
+      setError("Fehler beim Speichern: " + error.message);
+      return;
+    }
+
+    setSuccess(true);
+    setError("");
+    setSymbol("");
+    setAmount(0);
+    setPrice(0);
+
+    setTimeout(() => setSuccess(false), 3000);
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
-      <h2 className="text-lg font-semibold flex items-center gap-2">
-        <span>➕</span> Coin hinzufügen
-      </h2>
-      <div className="flex flex-wrap gap-2 items-center">
+    <form onSubmit={handleSubmit} className="bg-white p-4 rounded-xl shadow space-y-4">
+      <h2 className="text-xl font-semibold">➕ Coin hinzufügen</h2>
+
+      {error && <p className="text-red-500">{error}</p>}
+      {success && <p className="text-green-600">Erfolgreich gespeichert!</p>}
+
+      <div>
+        <label className="block mb-1 font-medium">Coin</label>
         <select
-          className="p-2 border rounded w-full sm:w-48"
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
+          className="w-full border rounded px-3 py-2"
         >
-          <option value="">Coin wählen…</option>
+          <option value="">Bitte wählen...</option>
           {coins.map((coin) => (
             <option key={coin.id} value={coin.symbol}>
               {coin.name} ({coin.symbol.toUpperCase()})
             </option>
           ))}
         </select>
-
-        <input
-          type="number"
-          step="any"
-          placeholder="Menge"
-          className="p-2 border rounded w-full sm:w-32"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
-        />
-        <input
-          type="number"
-          step="any"
-          placeholder="Preis in $"
-          className="p-2 border rounded w-full sm:w-32"
-          value={price}
-          onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
-        />
-        <button
-          onClick={handleAdd}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-        >
-          Hinzufügen
-        </button>
       </div>
-    </div>
+
+      <div>
+        <label className="block mb-1 font-medium">Anzahl</label>
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(Number(e.target.value))}
+          className="w-full border rounded px-3 py-2"
+          step="any"
+        />
+      </div>
+
+      <div>
+        <label className="block mb-1 font-medium">Preis pro Coin in $</label>
+        <input
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(Number(e.target.value))}
+          className="w-full border rounded px-3 py-2"
+          step="any"
+        />
+      </div>
+
+      <button
+        type="submit"
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+      >
+        Speichern
+      </button>
+    </form>
   );
 }
