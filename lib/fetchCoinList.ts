@@ -1,5 +1,3 @@
-// lib/fetchCoinList.ts
-
 let coinListCache: {
   id: string;
   symbol: string;
@@ -7,12 +5,7 @@ let coinListCache: {
   image: string;
 }[] | null = null;
 
-export async function fetchCoinList(): Promise<{
-  id: string;
-  symbol: string;
-  name: string;
-  image: string;
-}[]> {
+export async function fetchCoinList() {
   if (coinListCache) return coinListCache;
 
   try {
@@ -29,6 +22,6 @@ export async function fetchCoinList(): Promise<{
     return coinListCache;
   } catch (error) {
     console.error("Fehler beim Laden der Coin-Liste:", error);
-    return [];
+    return []; // NIE `null` zurückgeben
   }
 }

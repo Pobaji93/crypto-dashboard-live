@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { fetchCoinList } from "../lib/fetchCoinList";
+import { FaTrash } from "react-icons/fa";
 
 type Holding = {
   id: string;
@@ -20,7 +21,7 @@ type CoinData = {
 
 export default function Portfolio() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
-  const [coinList, setCoinList] = useState<CoinData[]>([]);
+  const [coinList, setCoinList] = useState<CoinData[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,12 +43,21 @@ export default function Portfolio() {
     fetchHoldingsAndCoins();
   }, []);
 
+  const deleteHolding = async (id: string) => {
+    const { error } = await supabase.from("portfolio").delete().eq("id", id);
+    if (error) {
+      console.error("Fehler beim Löschen:", error.message);
+    } else {
+      setHoldings((prev) => prev.filter((h) => h.id !== id));
+    }
+  };
+
   const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
+
+  if (loading || !coinList) return <p>🔄 Lade dein Portfolio...</p>;
 
   const getCoinData = (symbol: string): CoinData | undefined =>
     coinList.find((coin) => coin.symbol.toLowerCase() === symbol.toLowerCase());
-
-  if (loading) return <p>🔄 Lade dein Portfolio...</p>;
 
   return (
     <section className="bg-white p-4 rounded-xl shadow">
@@ -73,10 +83,19 @@ export default function Portfolio() {
                   )}
                   <span className="font-medium uppercase">{h.symbol}</span>
                 </div>
-                <span>
-                  {h.amount} × {h.price.toLocaleString()} $ ={" "}
-                  {(h.amount * h.price).toLocaleString()} $
-                </span>
+                <div className="flex items-center gap-2">
+                  <span>
+                    {h.amount} × {h.price.toLocaleString()} $ ={" "}
+                    {(h.amount * h.price).toLocaleString()} $
+                  </span>
+                  <button
+                    onClick={() => deleteHolding(h.id)}
+                    className="text-red-500 hover:text-red-700 transition"
+                    aria-label="Eintrag löschen"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </li>
             );
           })}
