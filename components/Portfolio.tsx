@@ -21,13 +21,12 @@ type CoinData = {
 
 export default function Portfolio() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
-  const [coinList, setCoinList] = useState<CoinData[] | null>(null);
+  const [coinList, setCoinList] = useState<CoinData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHoldingsAndCoins = async () => {
       const { data, error } = await supabase.from("portfolio").select("*");
-
       if (error) {
         console.error("Fehler beim Laden:", error.message);
       } else {
@@ -35,29 +34,28 @@ export default function Portfolio() {
       }
 
       const coins = await fetchCoinList();
-      setCoinList(coins);
-
+      if (coins) setCoinList(coins);
       setLoading(false);
     };
 
     fetchHoldingsAndCoins();
   }, []);
 
-  const deleteHolding = async (id: string) => {
+  const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
+
+  const getCoinData = (symbol: string): CoinData | undefined =>
+    coinList.find((coin) => coin.symbol.toLowerCase() === symbol.toLowerCase());
+
+  const handleDelete = async (id: string) => {
     const { error } = await supabase.from("portfolio").delete().eq("id", id);
     if (error) {
       console.error("Fehler beim Löschen:", error.message);
     } else {
-      setHoldings((prev) => prev.filter((h) => h.id !== id));
+      setHoldings(holdings.filter((h) => h.id !== id));
     }
   };
 
-  const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
-
-  if (loading || !coinList) return <p>🔄 Lade dein Portfolio...</p>;
-
-  const getCoinData = (symbol: string): CoinData | undefined =>
-    coinList.find((coin) => coin.symbol.toLowerCase() === symbol.toLowerCase());
+  if (loading) return <p>🔄 Lade dein Portfolio...</p>;
 
   return (
     <section className="bg-white p-4 rounded-xl shadow">
@@ -69,10 +67,7 @@ export default function Portfolio() {
           {holdings.map((h) => {
             const coin = getCoinData(h.symbol);
             return (
-              <li
-                key={h.id}
-                className="flex justify-between items-center gap-2"
-              >
+              <li key={h.id} className="flex justify-between items-center gap-2">
                 <div className="flex items-center gap-2">
                   {coin?.image && (
                     <img
@@ -83,19 +78,13 @@ export default function Portfolio() {
                   )}
                   <span className="font-medium uppercase">{h.symbol}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span>
-                    {h.amount} × {h.price.toLocaleString()} $ ={" "}
-                    {(h.amount * h.price).toLocaleString()} $
-                  </span>
-                  <button
-                    onClick={() => deleteHolding(h.id)}
-                    className="text-red-500 hover:text-red-700 transition"
-                    aria-label="Eintrag löschen"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
+                <span>
+                  {h.amount} × {h.price.toLocaleString()} $ ={" "}
+                  {(h.amount * h.price).toLocaleString()} $
+                </span>
+                <button onClick={() => handleDelete(h.id)} className="text-red-500 hover:text-red-700">
+                  <FaTrash />
+                </button>
               </li>
             );
           })}
