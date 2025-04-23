@@ -21,7 +21,9 @@ export default function AddHoldingForm() {
   useEffect(() => {
     const loadCoins = async () => {
       const list = await fetchCoinList();
-      setCoins(list);
+      if (list) {
+        setCoins(list);
+      }      
     };
     loadCoins();
   }, []);
