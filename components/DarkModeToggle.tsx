@@ -1,33 +1,48 @@
-// components/DarkModeToggle.tsx
 "use client";
 
 import { useEffect, useState } from "react";
+import { FaMoon, FaSun } from "react-icons/fa";
 
 export default function DarkModeToggle() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
 
+  // Nur auf Client prüfen (Icon-Rendering)
   useEffect(() => {
+    setMounted(true);
     const stored = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const enabled = stored === "dark" || (!stored && prefersDark);
 
-    setDarkMode(enabled);
-    document.documentElement.classList.toggle("dark", enabled);
+    if (stored === "dark" || (!stored && prefersDark)) {
+      document.documentElement.classList.add("dark");
+      setTheme("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      setTheme("light");
+    }
   }, []);
 
-  const toggle = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem("theme", newMode ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", newMode);
+  const toggleTheme = () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+
+    if (newTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   };
+
+  if (!mounted) return null; // verhindert flackerndes falsches Icon
 
   return (
     <button
-      onClick={toggle}
-      className="fixed top-4 right-4 bg-gray-200 dark:bg-gray-800 text-black dark:text-white px-3 py-2 rounded shadow"
+      onClick={toggleTheme}
+      className="fixed top-4 right-4 p-2 rounded bg-gray-200 dark:bg-gray-800"
+      title="Theme wechseln"
     >
-      {darkMode ? "☀️" : "🌙"}
+      {theme === "dark" ? <FaSun className="text-yellow-400" /> : <FaMoon />}
     </button>
   );
 }

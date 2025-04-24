@@ -58,17 +58,23 @@ export default function Portfolio() {
   if (loading) return <p>🔄 Lade dein Portfolio...</p>;
 
   return (
-    <section className="bg-white p-4 rounded-xl shadow">
-      <h2 className="text-xl font-semibold mb-2">📊 Dein Portfolio</h2>
+    <div className="card">
+      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        <span>📊</span> Dein Portfolio
+      </h2>
+
       {holdings.length === 0 ? (
         <p>Keine Einträge gefunden.</p>
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-3">
           {holdings.map((h) => {
             const coin = getCoinData(h.symbol);
             return (
-              <li key={h.id} className="flex justify-between items-center gap-2">
-                <div className="flex items-center gap-2">
+              <li
+                key={h.id}
+                className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded shadow"
+              >
+                <span className="flex items-center gap-2">
                   {coin?.image && (
                     <img
                       src={coin.image}
@@ -77,12 +83,18 @@ export default function Portfolio() {
                     />
                   )}
                   <span className="font-medium uppercase">{h.symbol}</span>
-                </div>
+                </span>
+
                 <span>
                   {h.amount} × {h.price.toLocaleString()} $ ={" "}
                   {(h.amount * h.price).toLocaleString()} $
                 </span>
-                <button onClick={() => handleDelete(h.id)} className="text-red-500 hover:text-red-700">
+
+                <button
+                  onClick={() => handleDelete(h.id)}
+                  className="text-red-500 hover:text-red-700"
+                  aria-label={`Remove ${h.symbol}`}
+                >
                   <FaTrash />
                 </button>
               </li>
@@ -90,9 +102,10 @@ export default function Portfolio() {
           })}
         </ul>
       )}
-      <div className="mt-2 font-bold text-right">
+
+      <div className="mt-4 text-right font-semibold">
         Total: {total.toLocaleString()} $
       </div>
-    </section>
+    </div>
   );
 }

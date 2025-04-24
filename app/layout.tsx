@@ -1,4 +1,3 @@
-// app/layout.tsx
 import "../styles/globals.css";
 import DarkModeToggle from "../components/DarkModeToggle";
 import type { Metadata } from "next";
@@ -8,7 +7,11 @@ export const metadata: Metadata = {
   description: "Verwalte dein Krypto-Portfolio übersichtlich & modern",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="de">
       <body className="min-h-screen font-sans bg-white text-gray-900 dark:bg-gray-900 dark:text-white transition-colors">

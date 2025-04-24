@@ -23,7 +23,7 @@ export default function AddHoldingForm() {
       const list = await fetchCoinList();
       if (list) {
         setCoins(list);
-      }      
+      }
     };
     loadCoins();
   }, []);
@@ -63,7 +63,7 @@ export default function AddHoldingForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white p-4 rounded-xl shadow space-y-4"
+      className="card"
     >
       <h2 className="text-xl font-semibold">➕ Coin hinzufügen</h2>
 
@@ -72,7 +72,7 @@ export default function AddHoldingForm() {
         <select
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
+          className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
         >
           <option value="">Bitte wählen</option>
           {coins.map((coin) => (
@@ -90,16 +90,16 @@ export default function AddHoldingForm() {
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
           />
         </div>
         <div>
-          <label className="block mb-1 font-medium">Preis (USD)</label>
+          <label className="card">Preis (USD)</label>
           <input
             type="number"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
           />
         </div>
       </div>
@@ -111,7 +111,7 @@ export default function AddHoldingForm() {
         Speichern
       </button>
 
-      {message && <p className="text-sm text-gray-700 mt-2">{message}</p>}
+      {message && <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{message}</p>}
     </form>
   );
 }
