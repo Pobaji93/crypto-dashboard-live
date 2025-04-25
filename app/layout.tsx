@@ -15,6 +15,20 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body className="min-h-screen font-sans bg-white text-gray-900 dark:bg-gray-900 dark:text-white transition-colors">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const theme = localStorage.getItem('theme');
+                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
         <DarkModeToggle />
         <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>
       </body>

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { fetchCoinList } from "../lib/fetchCoinList";
 import { FaTrash } from "react-icons/fa";
+import PriceChart from "../components/PriceChart";
+import { formatCurrency } from "../utils/formatCurrency";
 
 type Holding = {
   id: string;
@@ -17,9 +19,15 @@ type CoinData = {
   symbol: string;
   name: string;
   image: string;
+  current_price: number;
 };
 
-export default function Portfolio() {
+type Props = {
+  currency: "eur" | "usd";
+  exchangeRate: number;
+};
+
+export default function Portfolio({ currency, exchangeRate }: Props) {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [coinList, setCoinList] = useState<CoinData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,10 +38,10 @@ export default function Portfolio() {
       if (error) {
         console.error("Fehler beim Laden:", error.message);
       } else {
-        setHoldings(data as Holding[]);
+        setHoldings((data as Holding[]) || []);
       }
 
-      const coins = await fetchCoinList();
+      const coins = await fetchCoinList("eur"); // Immer EUR laden
       if (coins) setCoinList(coins);
       setLoading(false);
     };
@@ -41,70 +49,140 @@ export default function Portfolio() {
     fetchHoldingsAndCoins();
   }, []);
 
-  const total = holdings.reduce((sum, h) => sum + h.amount * h.price, 0);
-
   const getCoinData = (symbol: string): CoinData | undefined =>
     coinList.find((coin) => coin.symbol.toLowerCase() === symbol.toLowerCase());
+
+  const adjustedPrice = (price: number) =>
+    currency === "eur" ? price : price * exchangeRate;
+
+  const adjustedCurrentPrice = (price: number) =>
+    currency === "eur" ? price : price * exchangeRate;
+
+  const groupedHoldings = holdings.reduce<Record<string, { amount: number; totalCost: number }>>(
+    (acc, h) => {
+      const key = h.symbol.toLowerCase();
+      if (!acc[key]) {
+        acc[key] = { amount: 0, totalCost: 0 };
+      }
+      acc[key].amount += h.amount;
+      acc[key].totalCost += h.amount * adjustedPrice(h.price);
+      return acc;
+    },
+    {}
+  );
+
+  const totalInvested = Object.values(groupedHoldings).reduce(
+    (sum, g) => sum + g.totalCost,
+    0
+  );
+
+  const totalCurrentValue = Object.keys(groupedHoldings).reduce((sum, symbol) => {
+    const coin = getCoinData(symbol);
+    if (!coin) return sum;
+    return sum + adjustedCurrentPrice(coin.current_price) * groupedHoldings[symbol].amount;
+  }, 0);
+
+  const profitLoss = totalCurrentValue - totalInvested;
+  const profitLossPercent = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("portfolio").delete().eq("id", id);
     if (error) {
       console.error("Fehler beim Löschen:", error.message);
     } else {
-      setHoldings(holdings.filter((h) => h.id !== id));
+      setHoldings((prev) => prev.filter((h) => h.id !== id));
     }
   };
 
   if (loading) return <p>🔄 Lade dein Portfolio...</p>;
 
-  return (
-    <div className="card">
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <span>📊</span> Dein Portfolio
-      </h2>
+  const coinSymbols = Object.keys(groupedHoldings).filter(
+    (symbol) => groupedHoldings[symbol].amount > 0
+  );
 
-      {holdings.length === 0 ? (
-        <p>Keine Einträge gefunden.</p>
-      ) : (
-        <ul className="space-y-3">
+  if (coinSymbols.length === 0) return <p>Keine Einträge gefunden.</p>;
+
+  return (
+    <div className="space-y-12">
+      <div className="card p-4 space-y-4">
+        <ul className="space-y-4">
           {holdings.map((h) => {
             const coin = getCoinData(h.symbol);
+            const currentPrice = coin?.current_price || 0;
+            const totalValue = adjustedCurrentPrice(currentPrice) * h.amount;
+            const invested = adjustedPrice(h.price) * h.amount;
+            const diff = totalValue - invested;
+            const diffPercent = invested > 0 ? (diff / invested) * 100 : 0;
+
             return (
               <li
                 key={h.id}
-                className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded shadow"
+                className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-gray-800 p-3 rounded shadow"
               >
-                <span className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   {coin?.image && (
                     <img
                       src={coin.image}
                       alt={h.symbol}
-                      className="w-5 h-5 rounded-full"
+                      className="w-6 h-6 rounded-full"
                     />
                   )}
                   <span className="font-medium uppercase">{h.symbol}</span>
-                </span>
+                </div>
 
-                <span>
-                  {h.amount} × {h.price.toLocaleString()} $ ={" "}
-                  {(h.amount * h.price).toLocaleString()} $
-                </span>
-
-                <button
-                  onClick={() => handleDelete(h.id)}
-                  className="text-red-500 hover:text-red-700"
-                  aria-label={`Remove ${h.symbol}`}
-                >
-                  <FaTrash />
-                </button>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2 sm:mt-0">
+                  <span>Menge: {h.amount}</span>
+                  <span>∅ Preis: {formatCurrency(adjustedPrice(h.price), currency)}</span>
+                  <span>Wert: {formatCurrency(totalValue, currency)}</span>
+                  <span className={diff >= 0 ? "text-green-500" : "text-red-500"}>
+                    {diff >= 0 ? "▲" : "▼"} {formatCurrency(diff, currency)} ({diffPercent.toFixed(2)}%)
+                  </span>
+                  <button
+                    onClick={() => handleDelete(h.id)}
+                    className="text-red-500 hover:text-red-700"
+                    aria-label={`Remove ${h.symbol}`}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </li>
             );
           })}
         </ul>
-      )}
+      </div>
 
-      <div className="mt-4 text-right font-semibold">
-        Total: {total.toLocaleString()} $
+      <div className="card p-4 text-center space-y-2">
+        <div>Gesamtes investiertes Kapital: {formatCurrency(totalInvested, currency)}</div>
+        <div>Aktueller Wert: {formatCurrency(totalCurrentValue, currency)}</div>
+        <div className={profitLoss >= 0 ? "text-green-500" : "text-red-500"}>
+          Gewinn/Verlust: {formatCurrency(profitLoss, currency)} ({profitLossPercent.toFixed(2)}%)
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="space-y-8">
+        {coinSymbols.map((symbol) => {
+          const coin = getCoinData(symbol);
+          if (!coin) return null;
+          return (
+            <div key={symbol} className="card p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                {coin.image && (
+                  <img
+                    src={coin.image}
+                    alt={symbol}
+                    className="w-6 h-6 rounded-full"
+                  />
+                )}
+                <span className="font-medium uppercase">{symbol}</span>
+              </div>
+
+              <div className="mt-4">
+                <PriceChart coinId={coin.id} />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

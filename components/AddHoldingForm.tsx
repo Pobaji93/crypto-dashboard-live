@@ -11,7 +11,11 @@ type Coin = {
   image: string;
 };
 
-export default function AddHoldingForm() {
+type Props = {
+  currency: "eur" | "usd";
+};
+
+export default function AddHoldingForm({ currency }: Props) {
   const [coins, setCoins] = useState<Coin[]>([]);
   const [symbol, setSymbol] = useState("");
   const [amount, setAmount] = useState("");
@@ -20,13 +24,13 @@ export default function AddHoldingForm() {
 
   useEffect(() => {
     const loadCoins = async () => {
-      const list = await fetchCoinList();
+      const list = await fetchCoinList(currency);
       if (list) {
         setCoins(list);
       }
     };
     loadCoins();
-  }, []);
+  }, [currency]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,10 +65,7 @@ export default function AddHoldingForm() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="card"
-    >
+    <form onSubmit={handleSubmit} className="card">
       <h2 className="text-xl font-semibold">➕ Coin hinzufügen</h2>
 
       <div>
@@ -94,7 +95,7 @@ export default function AddHoldingForm() {
           />
         </div>
         <div>
-          <label className="card">Preis (USD)</label>
+          <label className="block mb-1 font-medium">Preis ({currency.toUpperCase()})</label>
           <input
             type="number"
             value={price}
@@ -106,12 +107,14 @@ export default function AddHoldingForm() {
 
       <button
         type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-2"
       >
         Speichern
       </button>
 
-      {message && <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{message}</p>}
+      {message && (
+        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{message}</p>
+      )}
     </form>
   );
 }
