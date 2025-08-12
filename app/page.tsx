@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Portfolio from "../components/Portfolio";
 import AddHoldingForm from "../components/AddHoldingForm";
-import PortfolioSummary from "../components/PortfolioSummary";
 import { fetchExchangeRate } from "../lib/fetchExchangeRate";
 
 export default function Home() {
@@ -59,7 +58,6 @@ export default function Home() {
         </button>
       </div>
 
-      <PortfolioSummary currency={currency} exchangeRate={exchangeRate} />
       <AddHoldingForm currency={currency} />
       <Portfolio currency={currency} exchangeRate={exchangeRate} />
     </main>
