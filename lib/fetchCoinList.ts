@@ -1,13 +1,27 @@
-let coinListCache: {
+type Coin = {
   id: string;
   symbol: string;
   name: string;
   image: string;
   current_price: number;
-}[] | null = null;
+};
+
+type CacheEntry = {
+  data: Coin[];
+  timestamp: number;
+};
+
+const CACHE_TTL = 10 * 60 * 1000; // 10 Minuten
+
+const coinListCache: Record<"eur" | "usd", CacheEntry | undefined> = {};
 
 export async function fetchCoinList(currency: "eur" | "usd" = "eur") {
-  if (coinListCache && currency === "eur") return coinListCache; // cache nur für EUR
+  const cached = coinListCache[currency];
+  const now = Date.now();
+
+  if (cached && now - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
 
   try {
     const res = await fetch(
@@ -23,9 +37,7 @@ export async function fetchCoinList(currency: "eur" | "usd" = "eur") {
       current_price: coin.current_price,
     }));
 
-    if (currency === "eur") {
-      coinListCache = formatted;
-    }
+    coinListCache[currency] = { data: formatted, timestamp: now };
 
     return formatted;
   } catch (error) {
