@@ -1,4 +1,4 @@
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+import { setTimeout as delay } from "timers/promises";
 
 export type RequestParams = Record<string, string | number>;
 
@@ -19,12 +19,11 @@ interface ClientOptions {
 export class CoinGeckoClient {
   private baseUrl = "https://api.coingecko.com/api/v3";
   private cache: Map<string, CacheEntry> = new Map();
-  private queue: (() => Promise<void>)[] = [];
+  private queue: (() => void)[] = [];
   private lastRequest = 0;
   private interval: number;
   private ttl: number;
   private retries: number;
-  private processing = false;
 
   constructor(options: ClientOptions = {}) {
     this.ttl = options.ttl ?? 60 * 1000; // default 1 minute
@@ -66,25 +65,23 @@ export class CoinGeckoClient {
     });
   }
 
-  private enqueue(fn: () => Promise<void>) {
+  private enqueue(fn: () => void) {
     this.queue.push(fn);
     this.processQueue();
   }
 
-  private async processQueue() {
-    if (this.processing) return;
-    this.processing = true;
+  private processQueue() {
+    if (!this.queue.length) return;
 
-    while (this.queue.length) {
-      const now = Date.now();
-      const wait = Math.max(this.interval - (now - this.lastRequest), 0);
-      if (wait > 0) await delay(wait);
+    const now = Date.now();
+    const wait = Math.max(this.interval - (now - this.lastRequest), 0);
+    const fn = this.queue.shift();
+
+    setTimeout(() => {
       this.lastRequest = Date.now();
-      const fn = this.queue.shift();
-      await fn?.();
-    }
-
-    this.processing = false;
+      fn?.();
+      this.processQueue();
+    }, wait);
   }
 
   private async fetchWithRetry(url: string): Promise<any> {
