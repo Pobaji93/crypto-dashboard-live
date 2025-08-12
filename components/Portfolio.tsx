@@ -41,9 +41,9 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
         const holdingsData = (data as Holding[]) || [];
         setHoldings(holdingsData);
 
-        const symbols = [
-          ...new Set(holdingsData.map((h) => h.symbol.toLowerCase())),
-        ];
+        const symbols = Array.from(
+          new Set(holdingsData.map((h) => h.symbol.toLowerCase()))
+        );
 
         if (symbols.length > 0) {
           try {
