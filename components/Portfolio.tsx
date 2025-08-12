@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { fetchCoinPrices } from "../lib/fetchCoinPrices";
-import { coingeckoClient } from "../lib/coingeckoClient";
+import { fetchCoinList } from "../lib/fetchCoinList";
 import { FaTrash } from "react-icons/fa";
 import PriceChart from "../components/PriceChart";
 import { formatCurrency } from "../utils/formatCurrency";
@@ -32,7 +31,6 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [coinList, setCoinList] = useState<CoinData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fadeIn, setFadeIn] = useState(false);
 
   useEffect(() => {
     const fetchHoldingsAndCoins = async () => {
@@ -40,72 +38,16 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
       if (error) {
         console.error("Fehler beim Laden:", error.message);
       } else {
-        const holdingsData = (data as Holding[]) || [];
-        setHoldings(holdingsData);
-
-        const symbols = Array.from(
-          new Set(holdingsData.map((h) => h.symbol.toLowerCase()))
-        );
-
-        if (symbols.length > 0) {
-          try {
-            const list = await coingeckoClient.get(
-              "/coins/list",
-              {},
-              24 * 60 * 60 * 1000
-            );
-            const relevant = symbols
-              .map((sym) =>
-                list.find((c: any) => c.symbol.toLowerCase() === sym)
-              )
-              .filter(Boolean);
-            const ids = relevant.map((c: any) => c.id);
-
-            const priceData = await fetchCoinPrices(ids, "eur");
-
-            const coins: CoinData[] = await Promise.all(
-              relevant.map(async (c: any) => {
-                let image = "";
-                try {
-                  const imgData = await coingeckoClient.get(
-                    `/coins/${c.id}`,
-                    {},
-                    24 * 60 * 60 * 1000
-                  );
-                  image = imgData.image?.thumb || "";
-                } catch {}
-
-                return {
-                  id: c.id,
-                  symbol: c.symbol,
-                  name: c.name,
-                  image,
-                  current_price: priceData[c.id]?.eur || 0,
-                } as CoinData;
-              })
-            );
-
-            setCoinList(coins);
-          } catch (err) {
-            console.error("Fehler beim Laden der Preise:", err);
-          }
-        }
+        setHoldings((data as Holding[]) || []);
       }
 
+      const coins = await fetchCoinList("eur"); // Immer EUR laden
+      if (coins) setCoinList(coins);
       setLoading(false);
     };
 
     fetchHoldingsAndCoins();
   }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      const t = setTimeout(() => setFadeIn(true), 50);
-      return () => clearTimeout(t);
-    } else {
-      setFadeIn(false);
-    }
-  }, [loading]);
 
   const getCoinData = (symbol: string): CoinData | undefined =>
     coinList.find((coin) => coin.symbol.toLowerCase() === symbol.toLowerCase());
@@ -151,18 +93,8 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
       setHoldings((prev) => prev.filter((h) => h.id !== id));
     }
   };
-  if (loading)
-    return (
-      <div className="space-y-4 animate-pulse">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-8 bg-gray-200 dark:bg-gray-700 rounded"
-          />
-        ))}
-        <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded" />
-      </div>
-    );
+
+  if (loading) return <p>🔄 Lade dein Portfolio...</p>;
 
   const coinSymbols = Object.keys(groupedHoldings).filter(
     (symbol) => groupedHoldings[symbol].amount > 0
@@ -171,11 +103,7 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
   if (coinSymbols.length === 0) return <p>Keine Einträge gefunden.</p>;
 
   return (
-    <div
-      className={`space-y-12 transition-opacity duration-500 ${
-        fadeIn ? "opacity-100" : "opacity-0"
-      }`}
-    >
+    <div className="space-y-12">
       <div className="card p-4 space-y-4">
         <ul className="space-y-4">
           {holdings.map((h) => {
