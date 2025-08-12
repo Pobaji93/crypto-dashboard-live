@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 html {
-  @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-white;
+  @apply bg-tr-light text-gray-900 dark:bg-tr-dark dark:text-tr-light;
   scroll-behavior: smooth;
 }
 
@@ -12,12 +12,12 @@ body {
 }
 
 .card {
-  @apply bg-white dark:bg-gray-800 p-4 rounded-xl shadow space-y-4;
+  @apply bg-tr-light dark:bg-tr-gray p-4 rounded-xl shadow space-y-4;
 }
 
 input,
 select {
-  @apply bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-3 py-2 w-full;
+  @apply bg-tr-light dark:bg-tr-gray text-gray-900 dark:text-tr-light border border-gray-300 dark:border-gray-600 rounded px-3 py-2 w-full;
 }
 
 button {

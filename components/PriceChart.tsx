@@ -9,6 +9,7 @@ import {
   PointElement,
   Tooltip,
   Legend,
+  Filler,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 
@@ -18,7 +19,8 @@ ChartJS.register(
   PointElement,
   LineElement,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 type Props = {
@@ -77,18 +79,36 @@ export default function PriceChart({ coinId }: Props) {
       const data = await res.json();
 
       const prices = data.prices.map((p: any) => p[1]);
-      const labels = data.prices.map((p: any) =>
-        new Date(p[0]).toLocaleDateString()
+      const rawLabels = data.prices.map((p: any) => p[0]);
+      const labels = rawLabels.map((ts: number) =>
+        new Date(ts).toLocaleDateString("de-DE")
       );
 
       setChartData({
         labels,
+        rawLabels,
         datasets: [
           {
             label: `${coinId.toUpperCase()} Preis (EUR)`,
             data: prices,
-            fill: false,
-            borderColor: "rgb(75, 192, 192)",
+            fill: true,
+            borderColor: "#00ff5b",
+            backgroundColor: (context: any) => {
+              const chart = context.chart;
+              const { ctx, chartArea } = chart;
+              if (!chartArea) {
+                return "rgba(0,255,91,0.1)";
+              }
+              const gradient = ctx.createLinearGradient(
+                0,
+                chartArea.top,
+                0,
+                chartArea.bottom
+              );
+              gradient.addColorStop(0, "rgba(0,255,91,0.4)");
+              gradient.addColorStop(1, "rgba(0,255,91,0)");
+              return gradient;
+            },
             tension: 0.3,
           },
         ],
@@ -114,6 +134,32 @@ export default function PriceChart({ coinId }: Props) {
   if (!chartData || !chartData.labels?.length)
     return <p className="text-sm text-gray-400">Keine Daten verfügbar.</p>;
 
+  const options = {
+    plugins: {
+      tooltip: {
+        callbacks: {
+          title: (items: any) => {
+            const raw = (items[0].chart.data as any).rawLabels[items[0].dataIndex];
+            return new Date(raw).toLocaleDateString("de-DE", {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+            });
+          },
+          label: (context: any) => {
+            const price = context.parsed.y as number;
+            const first = context.dataset.data[0] as number;
+            const diff = first ? ((price - first) / first) * 100 : 0;
+            return `${price.toLocaleString("de-DE", {
+              style: "currency",
+              currency: "EUR",
+            })} (${diff.toFixed(2)}%)`;
+          },
+        },
+      },
+    },
+  } as const;
+
   return (
     <div ref={ref} className="card">
       <div className="flex flex-wrap gap-2 mb-4">
@@ -123,8 +169,8 @@ export default function PriceChart({ coinId }: Props) {
             onClick={() => setDays(range.value)}
             className={`px-3 py-1 text-sm rounded ${
               days === range.value
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700"
+                ? "bg-tr-green text-tr-dark"
+                : "bg-gray-200 dark:bg-tr-gray text-gray-800 dark:text-tr-light"
             }`}
           >
             {range.label}
@@ -135,7 +181,7 @@ export default function PriceChart({ coinId }: Props) {
       <h2 className="text-lg font-semibold mb-2">
         📈 {coinId.toUpperCase()} Chart
       </h2>
-      <Line data={chartData} />
+      <Line data={chartData} options={options} />
     </div>
   );
 }

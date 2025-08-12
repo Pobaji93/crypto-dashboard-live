@@ -39,8 +39,8 @@ export default function Home() {
         <button
           className={`px-3 py-1 rounded ${
             currency === "eur"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-200 dark:bg-gray-700"
+              ? "bg-tr-green text-tr-dark"
+              : "bg-gray-200 dark:bg-tr-gray text-gray-800 dark:text-tr-light"
           }`}
           onClick={() => switchCurrency("eur")}
         >
@@ -49,8 +49,8 @@ export default function Home() {
         <button
           className={`px-3 py-1 rounded ${
             currency === "usd"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-200 dark:bg-gray-700"
+              ? "bg-tr-green text-tr-dark"
+              : "bg-gray-200 dark:bg-tr-gray text-gray-800 dark:text-tr-light"
           }`}
           onClick={() => switchCurrency("usd")}
         >

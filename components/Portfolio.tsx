@@ -117,7 +117,7 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
             return (
               <li
                 key={h.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-gray-800 p-3 rounded shadow"
+                className="flex flex-col sm:flex-row sm:items-center justify-between bg-tr-light dark:bg-tr-gray p-3 rounded shadow"
               >
                 <div className="flex items-center gap-2">
                   {coin?.image && (
@@ -134,7 +134,7 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
                   <span>Menge: {h.amount}</span>
                   <span>∅ Preis: {formatCurrency(adjustedPrice(h.price), currency)}</span>
                   <span>Wert: {formatCurrency(totalValue, currency)}</span>
-                  <span className={diff >= 0 ? "text-green-500" : "text-red-500"}>
+                  <span className={diff >= 0 ? "text-tr-green" : "text-red-500"}>
                     {diff >= 0 ? "▲" : "▼"} {formatCurrency(diff, currency)} ({diffPercent.toFixed(2)}%)
                   </span>
                   <button
@@ -154,7 +154,7 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
       <div className="card p-4 text-center space-y-2">
         <div>Gesamtes investiertes Kapital: {formatCurrency(totalInvested, currency)}</div>
         <div>Aktueller Wert: {formatCurrency(totalCurrentValue, currency)}</div>
-        <div className={profitLoss >= 0 ? "text-green-500" : "text-red-500"}>
+        <div className={profitLoss >= 0 ? "text-tr-green" : "text-red-500"}>
           Gewinn/Verlust: {formatCurrency(profitLoss, currency)} ({profitLossPercent.toFixed(2)}%)
         </div>
       </div>

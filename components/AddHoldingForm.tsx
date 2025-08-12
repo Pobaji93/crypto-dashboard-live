@@ -73,7 +73,7 @@ export default function AddHoldingForm({ currency }: Props) {
         <select
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
-          className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
+          className="w-full"
         >
           <option value="">Bitte wählen</option>
           {coins.map((coin) => (
@@ -91,7 +91,7 @@ export default function AddHoldingForm({ currency }: Props) {
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
+            className="w-full"
           />
         </div>
         <div>
@@ -100,14 +100,14 @@ export default function AddHoldingForm({ currency }: Props) {
             type="number"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
+            className="w-full"
           />
         </div>
       </div>
 
       <button
         type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-2"
+        className="bg-tr-green text-tr-dark px-4 py-2 rounded hover:bg-tr-green-dark mt-2"
       >
         Speichern
       </button>

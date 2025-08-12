@@ -39,7 +39,7 @@ export default function DarkModeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="fixed top-4 right-4 p-2 rounded bg-gray-200 dark:bg-gray-800"
+      className="fixed top-4 right-4 p-2 rounded bg-gray-200 dark:bg-tr-gray"
       title="Theme wechseln"
     >
       {theme === "dark" ? <FaSun className="text-yellow-400" /> : <FaMoon />}

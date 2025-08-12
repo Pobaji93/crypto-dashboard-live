@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body className="min-h-screen font-sans bg-white text-gray-900 dark:bg-gray-900 dark:text-white transition-colors">
+      <body className="min-h-screen font-sans bg-tr-light text-gray-900 dark:bg-tr-dark dark:text-tr-light transition-colors">
         <script
           dangerouslySetInnerHTML={{
             __html: `
