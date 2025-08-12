@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { searchCoins } from "../lib/searchCoins";
+import { fetchCoinList } from "../lib/fetchCoinList";
 
 type Coin = {
   id: string;
@@ -16,27 +16,21 @@ type Props = {
 };
 
 export default function AddHoldingForm({ currency }: Props) {
-  const [search, setSearch] = useState("");
-  const [results, setResults] = useState<Coin[]>([]);
-  const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
+  const [coins, setCoins] = useState<Coin[]>([]);
   const [symbol, setSymbol] = useState("");
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!search) {
-      setResults([]);
-      return;
-    }
-
-    const handler = setTimeout(async () => {
-      const list = await searchCoins(search);
-      setResults(list);
-    }, 300);
-
-    return () => clearTimeout(handler);
-  }, [search]);
+    const loadCoins = async () => {
+      const list = await fetchCoinList(currency);
+      if (list) {
+        setCoins(list);
+      }
+    };
+    loadCoins();
+  }, [currency]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +41,8 @@ export default function AddHoldingForm({ currency }: Props) {
       return;
     }
 
-    if (!selectedCoin || selectedCoin.symbol !== symbol.toLowerCase()) {
+    const selected = coins.find((c) => c.symbol === symbol.toLowerCase());
+    if (!selected) {
       setMessage("Ungültiger Coin.");
       return;
     }
@@ -64,8 +59,6 @@ export default function AddHoldingForm({ currency }: Props) {
     } else {
       setMessage("✅ Erfolgreich hinzugefügt.");
       setSymbol("");
-      setSearch("");
-      setSelectedCoin(null);
       setAmount("");
       setPrice("");
     }
@@ -75,39 +68,20 @@ export default function AddHoldingForm({ currency }: Props) {
     <form onSubmit={handleSubmit} className="card">
       <h2 className="text-xl font-semibold">➕ Coin hinzufügen</h2>
 
-      <div className="relative">
+      <div>
         <label className="block mb-1 font-medium">Coin</label>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setSymbol("");
-            setSelectedCoin(null);
-          }}
+        <select
+          value={symbol}
+          onChange={(e) => setSymbol(e.target.value)}
           className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
-          placeholder="Name oder Symbol eingeben"
-        />
-        {results.length > 0 && (
-          <ul className="absolute z-10 w-full bg-white dark:bg-gray-700 border mt-1 max-h-48 overflow-y-auto">
-            {results.map((coin) => (
-              <li key={coin.id}>
-                <button
-                  type="button"
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
-                  onClick={() => {
-                    setSymbol(coin.symbol);
-                    setSearch(`${coin.name} (${coin.symbol.toUpperCase()})`);
-                    setSelectedCoin(coin);
-                    setResults([]);
-                  }}
-                >
-                  {coin.name} ({coin.symbol.toUpperCase()})
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        >
+          <option value="">Bitte wählen</option>
+          {coins.map((coin) => (
+            <option key={coin.id} value={coin.symbol}>
+              {coin.name} ({coin.symbol.toUpperCase()})
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
