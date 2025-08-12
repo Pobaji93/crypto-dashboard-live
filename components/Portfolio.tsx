@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { fetchCoinPrices } from "../lib/fetchCoinPrices";
-import { coingeckoClient } from "../lib/coingeckoClient";
 import { FaTrash } from "react-icons/fa";
 import PriceChart from "../components/PriceChart";
 import { formatCurrency } from "../utils/formatCurrency";
@@ -49,11 +48,10 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
 
         if (symbols.length > 0) {
           try {
-            const list = await coingeckoClient.get(
-              "/coins/list",
-              {},
-              24 * 60 * 60 * 1000
+            const listRes = await fetch(
+              "https://api.coingecko.com/api/v3/coins/list"
             );
+            const list = await listRes.json();
             const relevant = symbols
               .map((sym) =>
                 list.find((c: any) => c.symbol.toLowerCase() === sym)
@@ -67,11 +65,10 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
               relevant.map(async (c: any) => {
                 let image = "";
                 try {
-                  const imgData = await coingeckoClient.get(
-                    `/coins/${c.id}`,
-                    {},
-                    24 * 60 * 60 * 1000
+                  const imgRes = await fetch(
+                    `https://api.coingecko.com/api/v3/coins/${c.id}`
                   );
+                  const imgData = await imgRes.json();
                   image = imgData.image?.thumb || "";
                 } catch {}
 
