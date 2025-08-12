@@ -11,7 +11,6 @@ import {
   Legend,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { coingeckoClient } from "../lib/coingeckoClient";
 
 ChartJS.register(
   CategoryScale,
@@ -35,16 +34,20 @@ const timeRanges = [
   { label: "MAX", value: "max" },
 ];
 
+const CACHE_TIMEOUT = 1000 * 60 * 5; // 5 minutes
+
 export default function PriceChart({ coinId }: Props) {
   const [chartData, setChartData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDays, setSelectedDays] = useState<string>("7");
   const [days, setDays] = useState<string>("7");
 
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
-  const requestRef = useRef(0);
+  const cacheRef = useRef<
+    Map<string, { data: any; timestamp: number }>
+  >(new Map());
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -60,53 +63,41 @@ export default function PriceChart({ coinId }: Props) {
     return () => observer.disconnect();
   }, []);
 
-  // debounce quick changes to the selected range
   useEffect(() => {
-    const t = setTimeout(() => setDays(selectedDays), 300);
-    return () => clearTimeout(t);
-  }, [selectedDays]);
+    return () => abortRef.current?.abort();
+  }, []);
 
   const fetchChartData = useCallback(async () => {
-    const reqId = ++requestRef.current;
-    const cacheKey = `chart-${coinId}-${days}`;
-
-    if (days === "ytd" || days === "max") {
-      try {
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
-            setChartData(parsed.data);
-            setError(null);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {}
+    const cacheKey = `${coinId}-${days}`;
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TIMEOUT) {
+      setChartData(cached.data);
+      setError(null);
+      setLoading(false);
+      return;
     }
 
     try {
       setLoading(true);
-      let data;
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      let url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=eur&days=${days}`;
 
       if (days === "ytd") {
         const currentYear = new Date().getFullYear();
         const from = Math.floor(new Date(`${currentYear}-01-01`).getTime() / 1000);
         const to = Math.floor(Date.now() / 1000);
-        data = await coingeckoClient.get(
-          `/coins/${coinId}/market_chart/range`,
-          { vs_currency: "eur", from, to },
-          24 * 60 * 60 * 1000
-        );
-      } else {
-        data = await coingeckoClient.get(
-          `/coins/${coinId}/market_chart`,
-          { vs_currency: "eur", days },
-          days === "max" ? 24 * 60 * 60 * 1000 : undefined
-        );
+        url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart/range?vs_currency=eur&from=${from}&to=${to}`;
       }
 
-      if (reqId !== requestRef.current) return;
+      const res = await fetch(url, { signal: controller.signal });
+
+      if (!res.ok) throw new Error("Fehler beim Laden der Chartdaten.");
+
+      const data = await res.json();
 
       const prices = data.prices.map((p: any) => p[1]);
       const labels = data.prices.map((p: any) =>
@@ -127,24 +118,13 @@ export default function PriceChart({ coinId }: Props) {
       };
 
       setChartData(chart);
+      cacheRef.current.set(cacheKey, { data: chart, timestamp: Date.now() });
       setError(null);
-
-      if (days === "ytd" || days === "max") {
-        try {
-          localStorage.setItem(
-            cacheKey,
-            JSON.stringify({ data: chart, timestamp: Date.now() })
-          );
-        } catch {}
-      }
     } catch (err: any) {
-      if (reqId === requestRef.current) {
-        setError(err.message || "Unbekannter Fehler");
-      }
+      if (err.name === "AbortError") return;
+      setError(err.message || "Unbekannter Fehler");
     } finally {
-      if (reqId === requestRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [coinId, days]);
 
@@ -154,8 +134,7 @@ export default function PriceChart({ coinId }: Props) {
     }
   }, [fetchChartData, isVisible]);
 
-  if (!isVisible)
-    return <div ref={ref} style={{ minHeight: "200px" }} />;
+  if (!isVisible) return <div ref={ref} style={{ minHeight: "200px" }} />;
 
   return (
     <div ref={ref} className="card">
@@ -163,9 +142,9 @@ export default function PriceChart({ coinId }: Props) {
         {timeRanges.map((range) => (
           <button
             key={range.value}
-            onClick={() => setSelectedDays(range.value)}
+            onClick={() => setDays(range.value)}
             className={`px-3 py-1 text-sm rounded ${
-              selectedDays === range.value
+              days === range.value
                 ? "bg-blue-500 text-white"
                 : "bg-gray-200 dark:bg-gray-700"
             }`}

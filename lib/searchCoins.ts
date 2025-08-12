@@ -1,5 +1,3 @@
-import { coingeckoClient } from "./coingeckoClient";
-
 let searchCache: Record<string, {
   id: string;
   name: string;
@@ -12,11 +10,10 @@ export async function searchCoins(query: string) {
   if (!q) return [];
   if (searchCache[q]) return searchCache[q];
   try {
-    const data = await coingeckoClient.get(
-      "/search",
-      { query: q },
-      5 * 60 * 1000
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`
     );
+    const data = await res.json();
     const coins = (data.coins || []).map((coin: any) => ({
       id: coin.id,
       name: coin.name,
