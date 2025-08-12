@@ -34,6 +34,8 @@ const timeRanges = [
   { label: "MAX", value: "max" },
 ];
 
+const CACHE_TIMEOUT = 1000 * 60 * 5; // 5 minutes
+
 export default function PriceChart({ coinId }: Props) {
   const [chartData, setChartData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,10 @@ export default function PriceChart({ coinId }: Props) {
 
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const cacheRef = useRef<
+    Map<string, { data: any; timestamp: number }>
+  >(new Map());
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -57,9 +63,26 @@ export default function PriceChart({ coinId }: Props) {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
   const fetchChartData = useCallback(async () => {
+    const cacheKey = `${coinId}-${days}`;
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TIMEOUT) {
+      setChartData(cached.data);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       let url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=eur&days=${days}`;
 
@@ -70,7 +93,7 @@ export default function PriceChart({ coinId }: Props) {
         url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart/range?vs_currency=eur&from=${from}&to=${to}`;
       }
 
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
 
       if (!res.ok) throw new Error("Fehler beim Laden der Chartdaten.");
 
@@ -81,7 +104,7 @@ export default function PriceChart({ coinId }: Props) {
         new Date(p[0]).toLocaleDateString()
       );
 
-      setChartData({
+      const chart = {
         labels,
         datasets: [
           {
@@ -92,9 +115,13 @@ export default function PriceChart({ coinId }: Props) {
             tension: 0.3,
           },
         ],
-      });
+      };
+
+      setChartData(chart);
+      cacheRef.current.set(cacheKey, { data: chart, timestamp: Date.now() });
       setError(null);
     } catch (err: any) {
+      if (err.name === "AbortError") return;
       setError(err.message || "Unbekannter Fehler");
     } finally {
       setLoading(false);
