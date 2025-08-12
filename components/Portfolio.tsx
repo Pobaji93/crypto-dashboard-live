@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { fetchCoinList } from "../lib/fetchCoinList";
+import { fetchCoinPrices } from "../lib/fetchCoinPrices";
 import { FaTrash } from "react-icons/fa";
 import PriceChart from "../components/PriceChart";
 import { formatCurrency } from "../utils/formatCurrency";
@@ -38,11 +38,56 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
       if (error) {
         console.error("Fehler beim Laden:", error.message);
       } else {
-        setHoldings((data as Holding[]) || []);
+        const holdingsData = (data as Holding[]) || [];
+        setHoldings(holdingsData);
+
+        const symbols = [
+          ...new Set(holdingsData.map((h) => h.symbol.toLowerCase())),
+        ];
+
+        if (symbols.length > 0) {
+          try {
+            const listRes = await fetch(
+              "https://api.coingecko.com/api/v3/coins/list"
+            );
+            const list = await listRes.json();
+            const relevant = symbols
+              .map((sym) =>
+                list.find((c: any) => c.symbol.toLowerCase() === sym)
+              )
+              .filter(Boolean);
+            const ids = relevant.map((c: any) => c.id);
+
+            const priceData = await fetchCoinPrices(ids, "eur");
+
+            const coins: CoinData[] = await Promise.all(
+              relevant.map(async (c: any) => {
+                let image = "";
+                try {
+                  const imgRes = await fetch(
+                    `https://api.coingecko.com/api/v3/coins/${c.id}`
+                  );
+                  const imgData = await imgRes.json();
+                  image = imgData.image?.thumb || "";
+                } catch {}
+
+                return {
+                  id: c.id,
+                  symbol: c.symbol,
+                  name: c.name,
+                  image,
+                  current_price: priceData[c.id]?.eur || 0,
+                } as CoinData;
+              })
+            );
+
+            setCoinList(coins);
+          } catch (err) {
+            console.error("Fehler beim Laden der Preise:", err);
+          }
+        }
       }
 
-      const coins = await fetchCoinList("eur"); // Immer EUR laden
-      if (coins) setCoinList(coins);
       setLoading(false);
     };
 
