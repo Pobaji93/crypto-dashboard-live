@@ -4,6 +4,7 @@ let coinListCache: {
   name: string;
   image: string;
   current_price: number;
+  price_change_percentage_24h: number;
 }[] | null = null;
 
 export async function fetchCoinList(currency: "eur" | "usd" = "eur") {
@@ -21,6 +22,7 @@ export async function fetchCoinList(currency: "eur" | "usd" = "eur") {
       name: coin.name,
       image: coin.image,
       current_price: coin.current_price,
+      price_change_percentage_24h: coin.price_change_percentage_24h,
     }));
 
     if (currency === "eur") {
