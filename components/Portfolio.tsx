@@ -31,6 +31,7 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [coinList, setCoinList] = useState<CoinData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fadeIn, setFadeIn] = useState(false);
 
   useEffect(() => {
     const fetchHoldingsAndCoins = async () => {
@@ -48,6 +49,15 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
 
     fetchHoldingsAndCoins();
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      const t = setTimeout(() => setFadeIn(true), 50);
+      return () => clearTimeout(t);
+    } else {
+      setFadeIn(false);
+    }
+  }, [loading]);
 
   const getCoinData = (symbol: string): CoinData | undefined =>
     coinList.find((coin) => coin.symbol.toLowerCase() === symbol.toLowerCase());
@@ -93,8 +103,18 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
       setHoldings((prev) => prev.filter((h) => h.id !== id));
     }
   };
-
-  if (loading) return <p>🔄 Lade dein Portfolio...</p>;
+  if (loading)
+    return (
+      <div className="space-y-4 animate-pulse">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-8 bg-gray-200 dark:bg-gray-700 rounded"
+          />
+        ))}
+        <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded" />
+      </div>
+    );
 
   const coinSymbols = Object.keys(groupedHoldings).filter(
     (symbol) => groupedHoldings[symbol].amount > 0
@@ -103,7 +123,11 @@ export default function Portfolio({ currency, exchangeRate }: Props) {
   if (coinSymbols.length === 0) return <p>Keine Einträge gefunden.</p>;
 
   return (
-    <div className="space-y-12">
+    <div
+      className={`space-y-12 transition-opacity duration-500 ${
+        fadeIn ? "opacity-100" : "opacity-0"
+      }`}
+    >
       <div className="card p-4 space-y-4">
         <ul className="space-y-4">
           {holdings.map((h) => {
