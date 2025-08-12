@@ -136,6 +136,11 @@ export default function PriceChart({ coinId }: Props) {
 
   if (!isVisible) return <div ref={ref} style={{ minHeight: "200px" }} />;
 
+  if (loading) return <p className="text-sm text-gray-400">🔄 Lade Chart...</p>;
+  if (error) return <p className="text-red-500 text-sm">⚠️ {error}</p>;
+  if (!chartData || !chartData.labels?.length)
+    return <p className="text-sm text-gray-400">Keine Daten verfügbar.</p>;
+
   return (
     <div ref={ref} className="card">
       <div className="flex flex-wrap gap-2 mb-4">
@@ -157,37 +162,7 @@ export default function PriceChart({ coinId }: Props) {
       <h2 className="text-lg font-semibold mb-2">
         📈 {coinId.toUpperCase()} Chart
       </h2>
-
-      {error ? (
-        <p className="text-red-500 text-sm transition-opacity duration-500">
-          ⚠️ {error}
-        </p>
-      ) : !chartData || !chartData.labels?.length ? (
-        loading ? (
-          <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse transition-opacity duration-500" />
-        ) : (
-          <p className="text-sm text-gray-400 transition-opacity duration-500">
-            Keine Daten verfügbar.
-          </p>
-        )
-      ) : (
-        <div className="relative h-64">
-          <div
-            className={`transition-opacity duration-500 ${
-              loading ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            <Line data={chartData} />
-          </div>
-          <div
-            className={`absolute inset-0 transition-opacity duration-500 ${
-              loading ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <div className="h-full w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </div>
-        </div>
-      )}
+      <Line data={chartData} />
     </div>
   );
 }
