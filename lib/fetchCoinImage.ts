@@ -1,15 +1,15 @@
-// lib/fetchCoinImage.ts
+import { coingeckoClient } from "./coingeckoClient";
 
 export async function fetchCoinImage(symbol: string): Promise<string | null> {
   try {
-    const listRes = await fetch("https://api.coingecko.com/api/v3/coins/list");
-    const list = await listRes.json();
+    const list = await coingeckoClient.get("/coins/list", {}, 24 * 60 * 60 * 1000);
 
-    const match = list.find((coin: any) => coin.symbol.toLowerCase() === symbol.toLowerCase());
+    const match = list.find(
+      (coin: any) => coin.symbol.toLowerCase() === symbol.toLowerCase()
+    );
     if (!match) return null;
 
-    const coinRes = await fetch(`https://api.coingecko.com/api/v3/coins/${match.id}`);
-    const coin = await coinRes.json();
+    const coin = await coingeckoClient.get(`/coins/${match.id}`, {}, 24 * 60 * 60 * 1000);
 
     return coin.image?.thumb || null;
   } catch (error) {
